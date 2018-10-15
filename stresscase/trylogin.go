@@ -28,9 +28,9 @@ func doTryHeart() {
 }
 
 func doTryLogin() {
-	defer func() {
-		doChan <- 0
-	}()
+	// defer func() {
+	// 	doChan <- 0
+	// }()
 	conn, err := net.Dial("tcp", global.AppConfig.ListenIP+":"+global.AppConfig.ListenPort)
 	if err != nil {
 		global.AppLog.PrintlnInfo(err)
@@ -79,11 +79,15 @@ func process(data []byte, psocket *mysocket.MySocket, ucontext *userContext, rea
 	if len(data) < 4 {
 		return 0
 	}
+	var headData [4]byte
 	if ucontext.pdecode != nil {
-		ucontext.pdecode.Do(data[0:4], data[0:4])
+		ucontext.pdecode.Do(headData[0:4], data[0:4])
+		fmt.Println(headData, data)
+	} else {
+		copy(headData[:], data[0:4])
 	}
 	var h mymsg.Head
-	b, s := mymsg.UnSerializeHead(&h, data)
+	b, s := mymsg.UnSerializeHead(&h, headData[:])
 	if !b {
 		return 0
 	}
@@ -95,6 +99,7 @@ func process(data []byte, psocket *mysocket.MySocket, ucontext *userContext, rea
 	if int(h.Size) > readBufferSize {
 		psocket.Close()
 		global.AppLog.PrintfError("cmdid:%d cmdlen:%d buflen:%d\n", h.Cmdid, h.Size, readBufferSize)
+		fmt.Println(data)
 		return 0
 	}
 	if int(h.Size) > len(data) {
@@ -128,7 +133,6 @@ func onTryPlayRsp(msg []byte, psocket mysocket.MyWriteCloser, ucontext *userCont
 		psocket.Close()
 		return
 	}
-	fmt.Println(rsp)
 	if rsp.Result != 0 {
 		psocket.Close()
 		return
