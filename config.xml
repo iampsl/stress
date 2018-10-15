@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
-	<listenIP>192.168.31.230</listenIP>
+	<listenIP>lgserver.lgapi.co</listenIP>
 	<listenPort>8085</listenPort>
 </config>

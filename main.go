@@ -25,5 +25,5 @@ func main() {
 		log.Fatalln(err)
 	}
 	installSignal()
-	stresscase.StressTryLogin(1000)
+	stresscase.StressTryLogin(1)
 }

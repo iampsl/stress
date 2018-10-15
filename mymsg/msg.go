@@ -252,6 +252,16 @@ const (
 	CMsgTryPlay = 68
 	//SMsgTryPlay 试玩响应
 	SMsgTryPlay = 69
+	//SMsgBaccaratStartBet 百家乐开始赌注
+	SMsgBaccaratStartBet = 20
+	//CMsgSitDown 坐下
+	CMsgSitDown = 28
+	//CMsgAddGolds 下注
+	CMsgAddGolds = 110
+	//SMsgAddGoldsRsp 下注响应
+	SMsgAddGoldsRsp = 111
+	//CMsgSitUp 站起
+	CMsgSitUp = 31
 )
 
 //Head 消息头
@@ -274,4 +284,81 @@ func (pmsg *TryPlay) Serialize(pbuffer *mybuffer.MyBuffer) {
 func (pmsg *TryPlay) UnSerialize(data []byte) bool {
 	b, _ := myunserialize(data, pmsg)
 	return b
+}
+
+//TryPlayRsp 试玩响应
+type TryPlayRsp struct {
+	Result   uint8
+	Account  string
+	Password string
+}
+
+//UnSerialize 反系列化
+func (pmsg *TryPlayRsp) UnSerialize(data []byte) bool {
+	b, _ := myunserialize(data, pmsg)
+	return b
+}
+
+//BaccaratStartBet 开始赌注
+type BaccaratStartBet struct {
+	ServiceID uint16
+	LeaveTime uint8
+}
+
+//UnSerialize 反系列化
+func (pmsg *BaccaratStartBet) UnSerialize(data []byte) bool {
+	b, _ := myunserialize(data, pmsg)
+	return b
+}
+
+//SitDown 坐下
+type SitDown struct {
+	ServiceID uint16
+}
+
+//Serialize 系列化
+func (pmsg *SitDown) Serialize(pbuffer *mybuffer.MyBuffer) {
+	myserialize(CMsgSitDown, pbuffer, pmsg)
+}
+
+//BetInfo bet info
+type BetInfo struct {
+	Type  uint8
+	Value uint32
+}
+
+//AddGolds 下注
+type AddGolds struct {
+	ServiceID uint16
+	ChairID   uint16
+	TableNO   string
+	Infos     []BetInfo
+}
+
+//Serialize 系列化
+func (pmsg *AddGolds) Serialize(pbuffer *mybuffer.MyBuffer) {
+	myserialize(CMsgAddGolds, pbuffer, pmsg)
+}
+
+//AddGoldsRsp 下注响应
+type AddGoldsRsp struct {
+	ServiceID uint16
+	Code      uint8
+	TableNO   string
+}
+
+//UnSerialize 反系列化
+func (pmsg *AddGoldsRsp) UnSerialize(data []byte) bool {
+	b, _ := myunserialize(data, pmsg)
+	return b
+}
+
+//SitUp 站起
+type SitUp struct {
+	ServiceID uint16
+}
+
+//Serialize 系列化
+func (pmsg *SitUp) Serialize(pbuffer *mybuffer.MyBuffer) {
+	myserialize(CMsgSitUp, pbuffer, pmsg)
 }

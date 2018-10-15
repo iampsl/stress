@@ -2,6 +2,7 @@ package mysocket
 
 import (
 	"net"
+	"stress/head"
 	"stress/mybuffer"
 	"sync"
 	"sync/atomic"
@@ -15,6 +16,7 @@ type MyWriteCloser interface {
 	Close()
 	WriteBytes(b []byte)
 	Write(s Serializer)
+	InitSSL(key string)
 }
 
 //MySocket 对net.Conn 的包装
@@ -28,6 +30,7 @@ type MySocket struct {
 	m          sync.Mutex
 	bclose     bool
 	writeIndex uint
+	pencode    *head.Encode
 }
 
 //NewMySocket 创建一个MySocket
@@ -116,9 +119,22 @@ func (my *MySocket) Write(s Serializer) {
 	var dataLen = my.buffers[my.writeIndex].Len()
 	s.Serialize(my.buffers[my.writeIndex])
 	var nowDataLen = my.buffers[my.writeIndex].Len()
+	if nowDataLen-dataLen >= 4 {
+		if my.pencode != nil {
+			tmpData := my.buffers[my.writeIndex].Data()
+			my.pencode.Do(tmpData[dataLen:dataLen+4], tmpData[dataLen:dataLen+4])
+		}
+	}
 	if dataLen == 0 && nowDataLen != 0 {
 		my.notify <- 0
 	}
+	my.m.Unlock()
+}
+
+//InitSSL 初始化ssl
+func (my *MySocket) InitSSL(key string) {
+	my.m.Lock()
+	my.pencode = head.NewEncode(key)
 	my.m.Unlock()
 }
 
