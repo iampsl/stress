@@ -252,8 +252,8 @@ const (
 	CMsgTryPlay = 68
 	//SMsgTryPlay 试玩响应
 	SMsgTryPlay = 69
-	//SMsgBaccaratStartBet 百家乐开始赌注
-	SMsgBaccaratStartBet = 20
+	//SMsgSignalStatus 信号状态
+	SMsgSignalStatus = 58
 	//CMsgSitDown 坐下
 	CMsgSitDown = 28
 	//CMsgAddGolds 下注
@@ -262,6 +262,12 @@ const (
 	SMsgAddGoldsRsp = 111
 	//CMsgSitUp 站起
 	CMsgSitUp = 31
+	//SMsgServerData 游戏数据
+	SMsgServerData = 13
+	//CMsgSelGroup 选择限额
+	CMsgSelGroup = 41
+	//SMsgSelGroupRsp 选择限额响应
+	SMsgSelGroupRsp = 32
 )
 
 //Head 消息头
@@ -299,14 +305,16 @@ func (pmsg *TryPlayRsp) UnSerialize(data []byte) bool {
 	return b
 }
 
-//BaccaratStartBet 开始赌注
-type BaccaratStartBet struct {
+//SignalStatus 信息状态
+type SignalStatus struct {
 	ServiceID uint16
-	LeaveTime uint8
+	State     uint8
+	Time      uint32
+	Result    string
 }
 
 //UnSerialize 反系列化
-func (pmsg *BaccaratStartBet) UnSerialize(data []byte) bool {
+func (pmsg *SignalStatus) UnSerialize(data []byte) bool {
 	b, _ := myunserialize(data, pmsg)
 	return b
 }
@@ -361,4 +369,100 @@ type SitUp struct {
 //Serialize 系列化
 func (pmsg *SitUp) Serialize(pbuffer *mybuffer.MyBuffer) {
 	myserialize(CMsgSitUp, pbuffer, pmsg)
+}
+
+//GroupLimit group limit
+type GroupLimit struct {
+	GroupID  uint16
+	MinMoney uint32
+	MaxMoney uint32
+}
+
+//RoomInfo 房间信息
+type RoomInfo struct {
+	SortID     uint16
+	GameID     uint16
+	CatID      uint16
+	ServiceID  uint16
+	ServerName string
+	TableNO    string
+	RoomType   uint8
+	Maintain   uint8
+	DealerID   string
+	DealerName string
+	//AnchorID    string       //2.6
+	//AnchorName  string       //2.6
+	BetTime uint32
+	Tel     string
+	Deny    uint8
+	//VirtableNum uint16       //2.6
+	GroupLimits []GroupLimit
+}
+
+//UnSerialize 反系列化
+func (pmsg *RoomInfo) UnSerialize(data []byte) (bool, int) {
+	return myunserialize(data, pmsg)
+}
+
+//ZoneLimitInfo 区域限额
+type ZoneLimitInfo struct {
+	MaxMoney uint32
+	MinMoney uint32
+	ZoneType uint16
+}
+
+//BetLimitInfo 赌注限额
+type BetLimitInfo struct {
+	GroupID   uint16
+	GameCatID uint16
+	ZoneInfos []ZoneLimitInfo
+}
+
+//UnSerialize 反系列化
+func (pmsg *BetLimitInfo) UnSerialize(data []byte) bool {
+	b, _ := myunserialize(data, pmsg)
+	return b
+}
+
+//ServerData 游戏数据
+type ServerData struct {
+	Data      map[uint16]*RoomInfo
+	BetLimits map[uint32]*BetLimitInfo
+}
+
+//UnSerialize 反系列化
+func (pmsg *ServerData) UnSerialize(data []byte) bool {
+	if len(data) < 2 {
+		return false
+	}
+	if pmsg.Data == nil {
+		pmsg.Data = make(map[uint16]*RoomInfo)
+	}
+	count := binary.LittleEndian.Uint16(data)
+	if count == 0 {
+		return true
+	}
+	index := 2
+	for i := 0; i < int(count); i++ {
+		var info RoomInfo
+		b, n := info.UnSerialize(data[index:])
+		if !b {
+			return false
+		}
+		index += n
+		pmsg.Data[info.ServiceID] = &info
+	}
+	return true
+}
+
+//SelGroup 选择限额
+type SelGroup struct {
+	GroupID   uint16
+	GameCatID uint16
+	RoomType  uint16
+}
+
+//Serialize 系列化
+func (pmsg *SelGroup) Serialize(pbuffer *mybuffer.MyBuffer) {
+	myserialize(CMsgSelGroup, pbuffer, pmsg)
 }
