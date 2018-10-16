@@ -411,6 +411,25 @@ type ZoneLimitInfo struct {
 	ZoneType uint16
 }
 
+//ZoneLimitInfoSlice 切片
+type ZoneLimitInfoSlice []ZoneLimitInfo
+
+func (s ZoneLimitInfoSlice) Len() int {
+	return len(s)
+}
+
+func (s ZoneLimitInfoSlice) Less(i, j int) bool {
+	return s[i].ZoneType < s[j].ZoneType
+}
+
+func (s ZoneLimitInfoSlice) Swap(i, j int) {
+	MaxMoney := s[i].MaxMoney
+	MinMoney := s[i].MinMoney
+	ZoneType := s[i].ZoneType
+	s[i].MaxMoney, s[i].MinMoney, s[i].ZoneType = s[j].MaxMoney, s[j].MinMoney, s[j].ZoneType
+	s[j].MaxMoney, s[j].MinMoney, s[j].ZoneType = MaxMoney, MinMoney, ZoneType
+}
+
 //BetLimitInfo 赌注限额
 type BetLimitInfo struct {
 	GroupID   uint16

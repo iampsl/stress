@@ -5,6 +5,7 @@ import (
 	"compress/zlib"
 	"io"
 	"net"
+	"sort"
 	"stress/global"
 	"stress/head"
 	"stress/mymsg"
@@ -252,6 +253,7 @@ func onSelGroupRsp(msg []byte, psocket mysocket.MyWriteCloser, ucontext *userCon
 	if ucontext.gamedata.BetLimits == nil {
 		ucontext.gamedata.BetLimits = make(map[uint32]*mymsg.BetLimitInfo)
 	}
+	sort.Sort(mymsg.ZoneLimitInfoSlice(rsp.ZoneInfos))
 	ucontext.gamedata.BetLimits[(uint32(roomType)<<16)|uint32(gameCatID)] = &rsp
 
 	ucontext.selGroupInfos = ucontext.selGroupInfos[1:]
