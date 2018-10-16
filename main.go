@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 	"path/filepath"
@@ -19,11 +20,14 @@ func initCwd() {
 	}
 }
 
+var n = flag.Uint("n", 1, "模拟用户数")
+
 func main() {
 	initCwd()
 	if err := global.LoadConfig("config.xml"); err != nil {
 		log.Fatalln(err)
 	}
 	installSignal()
-	stresscase.StressTryLogin(5)
+	flag.Parse()
+	stresscase.StressTryLogin(int(*n))
 }

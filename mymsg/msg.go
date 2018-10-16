@@ -380,22 +380,22 @@ type GroupLimit struct {
 
 //RoomInfo 房间信息
 type RoomInfo struct {
-	SortID     uint16
-	GameID     uint16
-	CatID      uint16
-	ServiceID  uint16
-	ServerName string
-	TableNO    string
-	RoomType   uint8
-	Maintain   uint8
-	DealerID   string
-	DealerName string
-	//AnchorID    string       //2.6
-	//AnchorName  string       //2.6
-	BetTime uint32
-	Tel     string
-	Deny    uint8
-	//VirtableNum uint16       //2.6
+	SortID      uint16
+	GameID      uint16
+	CatID       uint16
+	ServiceID   uint16
+	ServerName  string
+	TableNO     string
+	RoomType    uint8
+	Maintain    uint8
+	DealerID    string
+	DealerName  string
+	AnchorID    string //2.6
+	AnchorName  string //2.6
+	BetTime     uint32
+	Tel         string
+	Deny        uint8
+	VirtableNum uint16 //2.6
 	GroupLimits []GroupLimit
 }
 
