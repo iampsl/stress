@@ -435,6 +435,7 @@ type BetLimitInfo struct {
 	GroupID   uint16
 	GameCatID uint16
 	ZoneInfos []ZoneLimitInfo
+	RoomType  uint16
 }
 
 //UnSerialize 反系列化

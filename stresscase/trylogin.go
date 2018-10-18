@@ -11,30 +11,16 @@ import (
 	"stress/mymsg"
 	"stress/mysocket"
 	"strings"
-	"sync"
 )
 
-type tryPlayerMgr struct {
-	players map[*mysocket.MySocket]int64
-	mutex   sync.Mutex
-}
-
-type selGroupInfo struct {
-	groupID   uint16
-	gameCatID uint16
-	roomType  uint16
-}
-
 type userContext struct {
-	pdecode       *head.Decode
-	login         bool
-	decode        bool
-	gamedata      mymsg.ServerData
-	selGroupInfos []selGroupInfo
+	pdecode  *head.Decode
+	login    bool
+	decode   bool
+	gamedata mymsg.ServerData
 }
 
 var doChan = make(chan uint8)
-var tryMgr tryPlayerMgr
 
 func doTryHeart() {
 
@@ -52,6 +38,7 @@ func doTryLogin() {
 	psocket := mysocket.NewMySocket(conn)
 	defer psocket.Close()
 	var pusercontext userContext
+	pusercontext.gamedata.BetLimits = make(map[uint32]*mymsg.BetLimitInfo)
 	tryplay := mymsg.TryPlay{LoginType: 5}
 	psocket.Write(&tryplay)
 	const readBufferSize = 10240
@@ -172,16 +159,20 @@ func onSignalStatus(msg []byte, psocket mysocket.MyWriteCloser, ucontext *userCo
 	psocket.Write(&sitdown)
 	info, ok := ucontext.gamedata.Data[sigStatus.ServiceID]
 	if ok {
-		if ucontext.gamedata.BetLimits != nil {
-			limitInfos := ucontext.gamedata.BetLimits[(uint32(info.RoomType)<<16)|uint32(info.CatID)]
-			if limitInfos != nil && len(limitInfos.ZoneInfos) > 0 {
-				var addgolds mymsg.AddGolds
-				addgolds.ServiceID = sigStatus.ServiceID
-				addgolds.ChairID = 1
-				addgolds.TableNO = info.TableNO
-				addgolds.Infos = []mymsg.BetInfo{mymsg.BetInfo{Type: uint8(limitInfos.ZoneInfos[0].ZoneType), Value: limitInfos.ZoneInfos[0].MinMoney}}
-				psocket.Write(&addgolds)
-			}
+		limitInfos := ucontext.gamedata.BetLimits[(uint32(info.RoomType)<<16)|uint32(info.CatID)]
+		if limitInfos != nil && len(limitInfos.ZoneInfos) > 0 {
+			var addgolds mymsg.AddGolds
+			addgolds.ServiceID = sigStatus.ServiceID
+			addgolds.ChairID = 1
+			addgolds.TableNO = info.TableNO
+			addgolds.Infos = []mymsg.BetInfo{mymsg.BetInfo{Type: uint8(limitInfos.ZoneInfos[0].ZoneType), Value: limitInfos.ZoneInfos[0].MinMoney}}
+			psocket.Write(&addgolds)
+		} else if len(info.GroupLimits) > 0 {
+			var selGroup mymsg.SelGroup
+			selGroup.GroupID = info.GroupLimits[0].GroupID
+			selGroup.RoomType = uint16(info.RoomType)
+			selGroup.GameCatID = info.CatID
+			psocket.Write(&selGroup)
 		}
 	}
 	var situp mymsg.SitUp
@@ -211,30 +202,6 @@ func onServerData(msg []byte, psocket mysocket.MyWriteCloser, ucontext *userCont
 		if len(splits) > 0 {
 			v.TableNO = splits[0]
 		}
-		roomType := v.RoomType
-		gameCatID := v.CatID
-		groupID := uint16(0)
-		if len(v.GroupLimits) <= 0 {
-			continue
-		}
-		groupID = v.GroupLimits[0].GroupID
-		bfind := false
-		for _, tmp := range ucontext.selGroupInfos {
-			if tmp.gameCatID == gameCatID && tmp.groupID == groupID && tmp.roomType == uint16(roomType) {
-				bfind = true
-				break
-			}
-		}
-		if !bfind {
-			ucontext.selGroupInfos = append(ucontext.selGroupInfos, selGroupInfo{groupID, gameCatID, uint16(roomType)})
-		}
-	}
-	if len(ucontext.selGroupInfos) > 0 {
-		var selGroup mymsg.SelGroup
-		selGroup.GroupID = ucontext.selGroupInfos[0].groupID
-		selGroup.RoomType = ucontext.selGroupInfos[0].roomType
-		selGroup.GameCatID = ucontext.selGroupInfos[0].gameCatID
-		psocket.Write(&selGroup)
 	}
 }
 
@@ -245,25 +212,12 @@ func onSelGroupRsp(msg []byte, psocket mysocket.MyWriteCloser, ucontext *userCon
 		global.AppLog.PrintfError("UnSerialize failed\n")
 		return
 	}
-	if len(ucontext.selGroupInfos) <= 0 {
+	key := (uint32(rsp.RoomType) << 16) | uint32(rsp.GameCatID)
+	if pvalue := ucontext.gamedata.BetLimits[key]; pvalue != nil {
 		return
 	}
-	roomType := ucontext.selGroupInfos[0].roomType
-	gameCatID := ucontext.selGroupInfos[0].gameCatID
-	if ucontext.gamedata.BetLimits == nil {
-		ucontext.gamedata.BetLimits = make(map[uint32]*mymsg.BetLimitInfo)
-	}
 	sort.Sort(mymsg.ZoneLimitInfoSlice(rsp.ZoneInfos))
-	ucontext.gamedata.BetLimits[(uint32(roomType)<<16)|uint32(gameCatID)] = &rsp
-
-	ucontext.selGroupInfos = ucontext.selGroupInfos[1:]
-	if len(ucontext.selGroupInfos) > 0 {
-		var selGroup mymsg.SelGroup
-		selGroup.GroupID = ucontext.selGroupInfos[0].groupID
-		selGroup.RoomType = ucontext.selGroupInfos[0].roomType
-		selGroup.GameCatID = ucontext.selGroupInfos[0].gameCatID
-		psocket.Write(&selGroup)
-	}
+	ucontext.gamedata.BetLimits[key] = &rsp
 }
 
 func onAddGoldRsp(msg []byte, psocket mysocket.MyWriteCloser, ucontext *userContext) {
