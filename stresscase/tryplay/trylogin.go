@@ -1,4 +1,4 @@
-package stresscase
+package tryplay
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"stress/mymsg"
 	"stress/mysocket"
 	"strings"
+	"time"
 )
 
 type userContext struct {
@@ -21,10 +22,6 @@ type userContext struct {
 }
 
 var doChan = make(chan uint8)
-
-func doTryHeart() {
-
-}
 
 func doTryLogin() {
 	defer func() {
@@ -233,9 +230,11 @@ func onAddGoldRsp(msg []byte, psocket mysocket.MyWriteCloser, ucontext *userCont
 
 //StressTryLogin stress try Login
 func StressTryLogin(nums int) {
-	go doTryHeart()
 	for i := 0; i < nums; i++ {
 		go doTryLogin()
+		if 0 == i%200 {
+			time.Sleep(time.Second)
+		}
 	}
 	for range doChan {
 		go doTryLogin()

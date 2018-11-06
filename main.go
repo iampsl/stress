@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"stress/global"
-	"stress/stresscase"
+	"stress/stresscase/tryplay"
 )
 
 func init() {
@@ -29,5 +29,5 @@ func main() {
 	}
 	installSignal()
 	flag.Parse()
-	stresscase.StressTryLogin(int(*n))
+	tryplay.StressTryLogin(int(*n))
 }
