@@ -268,6 +268,10 @@ const (
 	CMsgSelGroup = 41
 	//SMsgSelGroupRsp 选择限额响应
 	SMsgSelGroupRsp = 32
+	//CMsgAuthSession 用户登录请求
+	CMsgAuthSession = 137
+	//SMsgAuthSessionRsp 用户登录响应
+	SMsgAuthSessionRsp = 138
 )
 
 //Head 消息头
@@ -485,4 +489,31 @@ type SelGroup struct {
 //Serialize 系列化
 func (pmsg *SelGroup) Serialize(pbuffer *mybuffer.MyBuffer) {
 	myserialize(CMsgSelGroup, pbuffer, pmsg)
+}
+
+//AuthSession 登录请求
+type AuthSession struct {
+	Version   uint32
+	LoginType uint8
+	IP        string
+	Account   string
+	Passwd    string
+	AgentCode string
+}
+
+//Serialize 系列化
+func (pmsg *AuthSession) Serialize(pbuffer *mybuffer.MyBuffer) {
+	myserialize(CMsgAuthSession, pbuffer, pmsg)
+}
+
+//AuthSessionRsp 登录响应
+type AuthSessionRsp struct {
+	Result uint8
+	Data   uint8
+}
+
+//UnSerialize 反系列化
+func (pmsg *AuthSessionRsp) UnSerialize(data []byte) bool {
+	b, _ := myunserialize(data, pmsg)
+	return b
 }

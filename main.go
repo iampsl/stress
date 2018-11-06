@@ -2,11 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"stress/global"
 	"stress/stresscase/tryplay"
+	"stress/stresscase/userlogin"
 )
 
 func init() {
@@ -21,6 +23,7 @@ func initCwd() {
 }
 
 var n = flag.Uint("n", 1, "模拟用户数")
+var cmd = flag.String("cmd", "login", "子命令, 例如try login")
 
 func main() {
 	initCwd()
@@ -29,5 +32,13 @@ func main() {
 	}
 	installSignal()
 	flag.Parse()
-	tryplay.StressTryLogin(int(*n))
+	switch *cmd {
+	case "try":
+		tryplay.StressTryLogin(int(*n))
+	case "login":
+		userlogin.StressUserLogin()
+	default:
+		fmt.Printf("未知的命令:%s\n", *cmd)
+	}
+
 }
