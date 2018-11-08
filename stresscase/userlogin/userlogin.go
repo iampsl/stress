@@ -47,7 +47,7 @@ func userLogin(info userPasswd) {
 	var pusercontext userContext
 	pusercontext.gamedata.BetLimits = make(map[uint32]*mymsg.BetLimitInfo)
 	pusercontext.keys = info
-	login := mymsg.AuthSession{Version: 12340, LoginType: 0, IP: "192.168.0.0", Account: info.username, Passwd: info.passwd, AgentCode: info.agentcode}
+	login := mymsg.AuthSession{Version: 12340, LoginType: 3, IP: "192.168.0.0", Account: info.username, Passwd: info.passwd, AgentCode: info.agentcode}
 	psocket.Write(&login)
 	const readBufferSize = 10240
 	var readBuffer = make([]byte, readBufferSize)
@@ -143,7 +143,6 @@ func onAuthSessionRsp(msg []byte, psocket mysocket.MyWriteCloser, ucontext *user
 		psocket.Close()
 		return
 	}
-	fmt.Println(rsp)
 	if rsp.Result != 12 {
 		psocket.Close()
 		return
