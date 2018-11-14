@@ -23,7 +23,7 @@ func initCwd() {
 }
 
 var n = flag.Uint("n", 1, "模拟用户数")
-var cmd = flag.String("cmd", "login", "子命令, 例如try login")
+var cmd = flag.String("cmd", "try", "子命令, 例如try login")
 
 func main() {
 	initCwd()
