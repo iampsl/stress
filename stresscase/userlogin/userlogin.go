@@ -14,15 +14,58 @@ import (
 	"stress/mymsg"
 	"stress/mysocket"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 )
 
+type userMgr struct {
+	users map[*mysocket.MySocket]*int64
+	m     sync.Mutex
+}
+
+func (mgr *userMgr) add(psocket *mysocket.MySocket, plastTime *int64) {
+	mgr.m.Lock()
+	if mgr.users == nil {
+		mgr.users = make(map[*mysocket.MySocket]*int64)
+	}
+	mgr.users[psocket] = plastTime
+	mgr.m.Unlock()
+}
+
+func (mgr *userMgr) del(psocket *mysocket.MySocket) {
+	mgr.m.Lock()
+	delete(mgr.users, psocket)
+	mgr.m.Unlock()
+}
+
+func (mgr *userMgr) close(timeout int) {
+	now := time.Now().Unix()
+	mgr.m.Lock()
+	for k, v := range mgr.users {
+		if now > atomic.LoadInt64(v)+int64(timeout) {
+			k.Close()
+		}
+	}
+	mgr.m.Unlock()
+}
+
+var umgr userMgr
+
+func doTimeoutCheck() {
+	for {
+		time.Sleep(30 * time.Second)
+		umgr.close(60)
+	}
+}
+
 type userContext struct {
-	pdecode  *head.Decode
-	login    bool
-	decode   bool
-	gamedata mymsg.ServerData
-	keys     userPasswd
+	pdecode      *head.Decode
+	login        bool
+	decode       bool
+	gamedata     mymsg.ServerData
+	keys         userPasswd
+	lastReadTime int64
 }
 
 type userPasswd struct {
@@ -43,10 +86,15 @@ func userLogin(info userPasswd) {
 		return
 	}
 	psocket := mysocket.NewMySocket(conn)
-	defer psocket.Close()
+	defer func() {
+		psocket.Close()
+		umgr.del(psocket)
+	}()
 	var pusercontext userContext
 	pusercontext.gamedata.BetLimits = make(map[uint32]*mymsg.BetLimitInfo)
 	pusercontext.keys = info
+	pusercontext.lastReadTime = time.Now().Unix()
+	umgr.add(psocket, &pusercontext.lastReadTime)
 	login := mymsg.AuthSession{Version: 12340, LoginType: 3, IP: "192.168.0.0", Account: info.username, Passwd: info.passwd, AgentCode: info.agentcode}
 	psocket.Write(&login)
 	const readBufferSize = 10240
@@ -115,6 +163,8 @@ func process(data []byte, psocket *mysocket.MySocket, ucontext *userContext, rea
 }
 
 func onMsg(cmdid uint16, msg []byte, psocket mysocket.MyWriteCloser, ucontext *userContext) {
+	now := time.Now().Unix()
+	atomic.StoreInt64(&(ucontext.lastReadTime), now)
 	if ucontext.login == false {
 		if cmdid != mymsg.SMsgAuthSessionRsp {
 			psocket.Close()
@@ -267,6 +317,7 @@ func StressUserLogin() {
 		fmt.Printf("没有得到用户信息\n")
 		return
 	}
+	go doTimeoutCheck()
 	for i, v := range users {
 		go userLogin(v)
 		if 0 == i%200 {
